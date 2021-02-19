@@ -19,7 +19,7 @@ Use of the following APIs and where they can be used:
 
 1. Yahoo Finance
 
-Documentation for the API can be found here: [yahoo-doc]().
+Documentation for the API can be found [here][yahoo-doc].
 
 There’s a new python module ``yfinance`` that wraps the new Yahoo Finance API.
 ```bash
@@ -27,5 +27,4 @@ pip install yfinance
 ```
 
 
-# Links
 [yahoo-doc]: https://github.com/ranaroussi/yfinance 
