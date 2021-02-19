@@ -27,4 +27,4 @@ pip install yfinance
 ```
 
 
-[yahoo-doc]: https://github.com/ranaroussi/yfinance 
+[yahoo-doc]: https://github.com/ranaroussi/yfinance
