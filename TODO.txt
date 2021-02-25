@@ -1,1 +1,30 @@
-1. Add option to search only stocks, not ETFs fron config
+1. Add option to search only stocks, not ETFs from config
+2. Provide trade scoring system
+3. Provide price range for what price movement you can expect &
+in what time period
+4. Provide Alerts, logs, confirmation for positions
+5. Downloader
+	- sectors
+	- stock
+	- all in one
+6. Study plotter w/ candles & timeframes
+7. SignalMaker
+	- Consider different strategies
+	- How long you should hold
+	- What combination of EMAs & timeframes is the best for profits
+	- Add profits & days held
+	- Divide by year, all, custom time
+8. DB_updater
+	- if it does not exists download all data, create db
+	- if exists download onyly missing days
+	- download 1h and aggregate?
+	- download 1h, 1d, 1w?
+9. Study before running and tell user if wnts to proceeds w/ defaults
+or optimized values
+	- use ML to reduce cost function, etc
+10. Provide "best candidates"
+	- price < 100
+	- low whipsaws in 1D frame (do manually in the beginning, later programatically)
+11. Have "Journal" mode to revise & add manually trades
+12. Each month generate report with positions, pl, drawdowns, stats of trades,
+month performance, ytd, all
