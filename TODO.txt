@@ -1,4 +1,5 @@
 1. Add option to search only stocks, not ETFs from config
+	- DONE
 2. Provide trade scoring system
 3. Provide price range for what price movement you can expect &
 in what time period
@@ -7,6 +8,7 @@ in what time period
 	- sectors
 	- stock
 	- all in one
+		- DONE
 6. Study plotter w/ candles & timeframes
 7. SignalMaker
 	- Consider different strategies
