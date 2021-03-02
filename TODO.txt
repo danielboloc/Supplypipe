@@ -9,6 +9,7 @@ in what time period
 	- stock
 	- all in one
 		- DONE
+	- if running before market opens (no data for 'today'), getting data from 'yesterday'
 6. Study plotter w/ candles & timeframes
 7. SignalMaker
 	- Consider different strategies
@@ -30,3 +31,7 @@ or optimized values
 11. Have "Journal" mode to revise & add manually trades
 12. Each month generate report with positions, pl, drawdowns, stats of trades,
 month performance, ytd, all
+13. Implement cache
+14. Implement downloading only missing data/database
+15. Figure the error "json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+16. Pre-filter securities qith ATM prices > 2.8, for now
