@@ -1,4 +1,4 @@
-import re
+import re, os
 from datetime import timedelta, date
 
 def str2list(string):
@@ -34,3 +34,10 @@ def determine_period(date, intervals):
 	# the interval is intrady, so we stick to 729 days from 'today'
 	else:
 		return date
+
+def check_if_folder_exists(timeframe):
+	today = date.today().strftime("%Y_%m_%d")
+	if not os.path.exists(os.path.abspath(os.path.join(os.path.dirname(__file__), f"../analysis/{today}/{timeframe}"))):
+		os.makedirs(os.path.abspath(os.path.join(os.path.dirname(__file__), f"../analysis/{today}/{timeframe}")))
+
+	return os.path.abspath(os.path.join(os.path.dirname(__file__), f"../analysis/{today}/{timeframe}"))
