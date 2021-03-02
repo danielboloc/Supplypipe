@@ -1,9 +1,16 @@
 from supplypipe.config import get_configuration
 from supplypipe.utils import list2str, calculate_download_days, determine_period
+from supplypipe.utils import check_if_folder_exists
 from supplypipe.downloader import download
+from supplypipe.plots import mtf
 import yfinance as yf
 import click
 import plotly.graph_objects as go
+import pandas as pd
+from datetime import timedelta, date
+from pandas.tseries.offsets import BDay # business days
+import pickle
+import os
 
 # Setup days for the data retrieval, since we only get 730D @1h
 start_date, end_date = calculate_download_days()
@@ -39,49 +46,155 @@ def main(only_stock, on_demand, intervals, start, end):
     # options = {'start': determine_period(start, intervals),
     #            'end': determine_period(end, intervals)}
 
-    print(f"Securities in the current analysis: {securities2download}")
     #hour, day, week = download(securities2download, intervals, **options)
-    hour, day, week = download(securities2download, intervals)
-    hour4 = hour.resample('4H').mean().dropna()
-    oneD = hour.resample('B').mean() # business day
-    # plot data with EMAs
-        # if is too large split by year
-    import pandas as pd
-    import mplfinance as mpf
-    import matplotlib.pyplot as plt
+    today = date.today().strftime("%Y-%m-%d")
+    yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
 
-    exp3 = day['Close'].ewm(span=3, adjust=True).mean()
-    exp5 = week['Close'].ewm(span=5, adjust=True).mean()
-    exp7 = hour4['Close'].ewm(span=7, adjust=True).mean()
-    exp15 = day['Close'].ewm(span=15, adjust=True).mean()
-    exp15_w = week['Close'].ewm(span=15, adjust=True).mean()
-    exp21 = hour4['Close'].ewm(span=21, adjust=True).mean()
-    mc = mpf.make_marketcolors(up='g',down='r',volume='in')
-    s  = mpf.make_mpf_style(marketcolors=mc)
-    # #s = mpf.make_mpf_style(base_mpf_style='binance',rc={'figure.facecolor':'lightgray'})
-    # apds = [mpf.make_addplot(exp3,color='red'),
-    #          mpf.make_addplot(exp15,color='green')]
-    # # #mpf.plot(hour4,type='renko',renko_params=dict(brick_size='atr', atr_length=2))
-    # fig, axes = mpf.plot(day,type='candle',addplot=apds,figscale=1.5,figratio=(7,5),title='\n\nTEST',
-    #                   style=s,returnfig=True,volume=True)
-    # mpf.show()
-    # breakpoint()
+    directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "history"))
+    picklename = os.path.join(directory, 'supply_trades.pickle')
 
-    # 3 in one figures
-    fig = mpf.figure(figsize=(20,35),style=s)
-    ax1 = fig.add_subplot(4,1,1)
-    ax2 = fig.add_subplot(4,1,2)
-    ax3 = fig.add_subplot(4,1,3)
-    ax4 = fig.add_subplot(4,1,4)
-    seven_twenty_one = [mpf.make_addplot(exp7,color='red',ax=ax1),mpf.make_addplot(exp21,color='green',ax=ax1)]
-    three_fifteen = [mpf.make_addplot(exp3,color='red',ax=ax2),mpf.make_addplot(exp15,color='green',ax=ax2)]
-    five_fifteen = [mpf.make_addplot(exp5,color='red',ax=ax3),mpf.make_addplot(exp15_w,color='green',ax=ax3)]
-    mpf.plot(hour4,type='candle',ax=ax1,axtitle='4H',addplot=seven_twenty_one,xrotation=0)
-    mpf.plot(day,type='candle',ax=ax2,axtitle='1D',addplot=three_fifteen,xrotation=0)
-    mpf.plot(week ,type='candle',ax=ax3,axtitle='1W',volume=ax4,addplot=five_fifteen,xrotation=0)
-    plt.suptitle("EEM")
-    plt.savefig('tsave30.pdf',dpi=90,pad_inches=0.25)
+    if os.path.exists(picklename):
+        with open(picklename, 'rb') as f:
+            SIGNALS = pickle.load(f)
+    else:
+        SIGNALS = dict()
 
+    SIGNALS[today] = {}
+    SIGNALS[today]["BUY"] = {}
+    SIGNALS[today]["BUY"]["4H"] = []
+    SIGNALS[today]["BUY"]["1D"] = []
+    SIGNALS[today]["SELL"] = {}
+    SIGNALS[today]["SELL"]["4H"] = []
+    SIGNALS[today]["SELL"]["1D"] = []
+    SIGNALS[today]["NO_OPTIONS"] = []
+    SIGNALS[today]["NO_TODAY_DATA"] = []
+    for security in securities2download.replace(","," ").split():
+
+        ticker = yf.Ticker(security)
+
+        try:
+            ticker.options
+        except IndexError:
+            SIGNALS[today]["NO_OPTIONS"].append(security)
+            print(f"{security} does not have options, skipping...")
+            continue
+
+        print(f"Security download: {security}")
+        hour, day, week = download(security, intervals)
+        ohlc_dict = {                                                                                                             
+            'Open':'first',                                                                                                    
+            'High':'max',                                                                                                       
+            'Low':'min',                                                                                                        
+            'Close': 'last',                                                                                                    
+            'Volume': 'sum'                                                                                                        
+        }
+        hour4 = hour.resample('4H').agg(ohlc_dict).dropna()
+        # if using the premarket, filter outliers
+        # from scipy import stats
+        # import numpy as np
+        # hour4 = hour4[(np.abs(stats.zscore(hour4)) < 3).all(axis=1)]
+        #hour42 = hour.resample('4H').mean().dropna()
+        oneD = hour.resample('B').mean() # business day
+        # plot data with EMAs
+            # if is too large split by year
+
+        exp3 = day['Close'].ewm(span=3, adjust=True).mean()
+        exp5 = week['Close'].ewm(span=5, adjust=True).mean()
+        exp7 = hour4['Close'].ewm(span=7, adjust=True).mean()
+        exp15 = day['Close'].ewm(span=15, adjust=True).mean()
+        exp15_w = week['Close'].ewm(span=15, adjust=True).mean()
+        exp21 = hour4['Close'].ewm(span=21, adjust=True).mean()
+
+        # only business day
+        # Check at 4h vs 1D
+        try:
+            if exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] > exp15.loc[today]:
+                # BUY signal
+                mtf(security,
+                    check_if_folder_exists("4H"),
+                    hour4,
+                    day,
+                    week,
+                    exp3,
+                    exp5,
+                    exp7,
+                    exp15,
+                    exp15_w,
+                    exp21)
+                if security not in SIGNALS[today]["BUY"]["4H"]: SIGNALS[today]["BUY"]["4H"].append(security)
+                #draw()
+            elif exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] < exp15.loc[today]:
+                # SELL signal
+                mtf(security,
+                    check_if_folder_exists("4H"),
+                    hour4,
+                    day,
+                    week,
+                    exp3,
+                    exp5,
+                    exp7,
+                    exp15,
+                    exp15_w,
+                    exp21)
+                if security not in SIGNALS[today]["SELL"]["4H"]: SIGNALS[today]["SELL"]["4H"].append(security)
+                #check_if_folder_exists("4H")
+            # Check at 1D vs 1W
+            elif exp3.loc[today] > exp15.loc[today] and exp3.loc[yesterday] < exp15.loc[yesterday] and exp5.loc[today] > exp15_w.loc[today]:
+                # BUY signal
+                mtf(security,
+                    check_if_folder_exists("1D"),
+                    hour4,
+                    day,
+                    week,
+                    exp3,
+                    exp5,
+                    exp7,
+                    exp15,
+                    exp15_w,
+                    exp21)
+                if security not in SIGNALS[today]["BUY"]["1D"]: SIGNALS[today]["BUY"]["1D"].append(security)
+                #check_if_folder_exists("1D")
+                #draw()
+            elif exp3.loc[today] < exp15.loc[today] and exp3.loc[yesterday] > exp15.loc[yesterday] and exp5.loc[today] < exp15_w.loc[today]:
+                # SELL signal
+                mtf(security,
+                    check_if_folder_exists("1D"),
+                    hour4,
+                    day,
+                    week,
+                    exp3,
+                    exp5,
+                    exp7,
+                    exp15,
+                    exp15_w,
+                    exp21)
+                if security not in SIGNALS[today]["SELL"]["1D"]: SIGNALS[today]["SELL"]["1D"].append(security)
+                #check_if_folder_exists("1D")
+        except (KeyError, IndexError) as e:
+            SIGNALS[today]["NO_TODAY_DATA"].append(security)
+            print(f"{security} does not yet have TODAY's data, try again later")
+            continue
+
+    print(f"SIGNALS for {today}: \n")
+    print(f"BUY:\n")
+    print(f"\t\t4H: {SIGNALS[today]['BUY']['4H']}: \n")
+    print(f"\t\t1D: {SIGNALS[today]['BUY']['1D']}: \n")
+    print(f"SELL:\n")
+    print(f"\t\t4H: {SIGNALS[today]['SELL']['4H']}: \n")
+    print(f"\t\t1D: {SIGNALS[today]['SELL']['1D']}: \n")
+    print(f"NO_OPTIONS:\n")
+    print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
+    print(f"NO_TODAY_DATA:\n")
+    print(f"\t\t{SIGNALS[today]['NO_TODAY_DATA']}: \n")
+
+    if os.path.exists(picklename):
+        backupname = picklename + '.bak'
+        if os.path.exists(backupname):
+            os.remove(backupname)
+        os.rename(picklename, backupname)
+    # save
+    with open(picklename, "wb") as f:
+        pickle.dump(SIGNALS, f, pickle.HIGHEST_PROTOCOL)
     #data.resample('D').mean().fillna(method='bfill')
     #mpf.plot(greatTime)
     #print(exp7)
