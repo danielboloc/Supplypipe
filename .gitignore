@@ -1,2 +1,6 @@
 *.pyc
 *.DS_Store
+*.conf
+analysis/
+*.bak
+*.pickle
