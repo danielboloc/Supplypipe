@@ -7,7 +7,7 @@ import yfinance as yf
 import click
 import plotly.graph_objects as go
 import pandas as pd
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from pandas.tseries.offsets import BDay # business days
 import pickle
 import os
@@ -72,12 +72,13 @@ def main(only_stock, on_demand, intervals, start, end):
 
         ticker = yf.Ticker(security)
 
-        try:
-            ticker.options
-        except IndexError:
-            SIGNALS[today]["NO_OPTIONS"].append(security)
-            print(f"{security} does not have options, skipping...")
-            continue
+        if not on_demand:
+            try:
+                ticker.options
+            except IndexError:
+                SIGNALS[today]["NO_OPTIONS"].append(security)
+                print(f"{security} does not have options, skipping...")
+                continue
 
         print(f"Security download: {security}")
         hour, day, week = download(security, intervals)
@@ -108,7 +109,9 @@ def main(only_stock, on_demand, intervals, start, end):
         # only business day
         # Check at 4h vs 1D
         try:
-            if exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] > exp15.loc[today]:
+            if on_demand:
+                mtf(security,check_if_folder_exists("on_demand"),hour4,day,week,exp3,exp5,exp7,exp15,exp15_w,exp21)
+            elif exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] > exp15.loc[today]:
                 # BUY signal
                 mtf(security,
                     check_if_folder_exists("4H"),
@@ -169,7 +172,7 @@ def main(only_stock, on_demand, intervals, start, end):
                     exp15_w,
                     exp21)
                 if security not in SIGNALS[today]["SELL"]["1D"]: SIGNALS[today]["SELL"]["1D"].append(security)
-                #check_if_folder_exists("1D")
+
         except (KeyError, IndexError) as e:
             SIGNALS[today]["NO_TODAY_DATA"].append(security)
             print(f"{security} does not yet have TODAY's data, try again later")
@@ -177,11 +180,11 @@ def main(only_stock, on_demand, intervals, start, end):
 
     print(f"SIGNALS for {today}: \n")
     print(f"BUY:\n")
-    print(f"\t\t4H: {SIGNALS[today]['BUY']['4H']}: \n")
-    print(f"\t\t1D: {SIGNALS[today]['BUY']['1D']}: \n")
+    print(f"\t\t4H: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['BUY']['4H'] ]}: \n")
+    print(f"\t\t1D: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['BUY']['1D'] ]}: \n")
     print(f"SELL:\n")
-    print(f"\t\t4H: {SIGNALS[today]['SELL']['4H']}: \n")
-    print(f"\t\t1D: {SIGNALS[today]['SELL']['1D']}: \n")
+    print(f"\t\t4H: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['SELL']['4H'] ]}: \n")
+    print(f"\t\t1D: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['SELL']['1D'] ]}: \n")
     print(f"NO_OPTIONS:\n")
     print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
     print(f"NO_TODAY_DATA:\n")
@@ -195,6 +198,28 @@ def main(only_stock, on_demand, intervals, start, end):
     # save
     with open(picklename, "wb") as f:
         pickle.dump(SIGNALS, f, pickle.HIGHEST_PROTOCOL)
+
+    log_into_journal = input("Would you like me to log some trades into the JOURNAL, Sir? [y/n]")
+    journal_data = []
+    if log_into_journal == 'y':
+        while True:
+            print("Input ID, NAME, OPEN, EXPIRATION, STRIKE, TIMEFRAME, COMMISSION\n\n")
+            _id = input("ID: ")
+            name = input("NAME: ")
+            _open = input("OPEN: ")
+            exp = input("EXPIRATION: ")
+            strike = input("STRIKE: ")
+            tmfr = input("TIMEFRAME: ")
+            o_comm = input("COMMISSION: ") # open commision
+            journal_data.append([_id,name,today,_open,exp,strike,tmfr,o_comm]+[None]*7)
+            quit = input("Press 'quit' if you are done, or return to continue, Sir: ")
+            if quit == 'quit':
+                print("This should suffice for today, Sir. See you tomorrow")
+                break
+    else:
+        print("Very well, Sir. Better luck next time.")
+
+    df = pd.DataFrame(journal_data, columns=['ID','NAME','DATE_O','OPEN','EXPIRATION','STRIKE','TIMEFRAME','COMM_O','DATE_C','CLOSE','C-O','R:R','%CAUGHT','P&L','TOTAL'])
     #data.resample('D').mean().fillna(method='bfill')
     #mpf.plot(greatTime)
     #print(exp7)
