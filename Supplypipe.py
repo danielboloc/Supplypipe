@@ -1,6 +1,6 @@
 from supplypipe.config import get_configuration
 from supplypipe.utils import list2str, calculate_download_days, determine_period
-from supplypipe.utils import check_if_folder_exists
+from supplypipe.utils import check_if_folder_exists, bid_ask_spread
 from supplypipe.downloader import download
 from supplypipe.plots import mtf
 import yfinance as yf
@@ -30,7 +30,10 @@ start_date, end_date = calculate_download_days()
 @click.option("--end",
               help="End date of data retrieval",
               default=end_date) # today
-def main(only_stock, on_demand, intervals, start, end):
+@click.option("--journal",
+              help="Manual entry of trades",
+              is_flag=True)
+def main(only_stock, on_demand, intervals, start, end, journal):
     config = get_configuration()
     # tickers = yf.Tickers(config["SECTORS"]["technology"])
     # print(tickers.tickers.QQQ.history(period="1mo"))
@@ -47,8 +50,14 @@ def main(only_stock, on_demand, intervals, start, end):
     #            'end': determine_period(end, intervals)}
 
     #hour, day, week = download(securities2download, intervals, **options)
-    today = date.today().strftime("%Y-%m-%d")
-    yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+    weekday = datetime.today().weekday() # returns a number: 5,6->Sat,Sun
+    # if running on a weekend, will consider as friday
+    if 5 <= weekday >= 6:
+        today = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+        yesterday = (date.today() - BDay(2)).strftime("%Y-%m-%d")
+    else:
+        today = date.today().strftime("%Y-%m-%d")
+        yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
 
     directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "history"))
     picklename = os.path.join(directory, 'supply_trades.pickle')
@@ -68,7 +77,11 @@ def main(only_stock, on_demand, intervals, start, end):
     SIGNALS[today]["SELL"]["1D"] = []
     SIGNALS[today]["NO_OPTIONS"] = []
     SIGNALS[today]["NO_TODAY_DATA"] = []
+    SIGNALS[today]["ATM_HUGE_SPREAD"] = []
     for security in securities2download.replace(","," ").split():
+
+        if journal:
+            break
 
         ticker = yf.Ticker(security)
 
@@ -79,6 +92,10 @@ def main(only_stock, on_demand, intervals, start, end):
                 SIGNALS[today]["NO_OPTIONS"].append(security)
                 print(f"{security} does not have options, skipping...")
                 continue
+            # else:
+            #     if bid_ask_spread(ticker): # determine if I should skip this ticker
+            #         SIGNALS[today]["ATM_HUGE_SPREAD"].append(security)
+            #         continue
 
         print(f"Security download: {security}")
         hour, day, week = download(security, intervals)
@@ -109,12 +126,22 @@ def main(only_stock, on_demand, intervals, start, end):
         # only business day
         # Check at 4h vs 1D
         try:
+
+            buy_fourH_oneD = exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0]
+            sell_fourH_oneD = exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0]
+            buy_oneD_oneW = exp3.loc[today] > exp15.loc[today] and exp3.loc[yesterday] < exp15.loc[yesterday] and exp5.loc[today] > exp15_w.loc[today]
+            sell_oneD_oneW = exp3.loc[today] < exp15.loc[today] and exp3.loc[yesterday] > exp15.loc[yesterday] and exp5.loc[today] < exp15_w.loc[today]
+            # make sure both the 1d and 1w are up, not looking for 1D cross
+            buy_zone_day_week = exp3.loc[today] > exp15.loc[today] and exp5.loc[today] > exp15_w.loc[today]
+            # make sure both the 1d and 1w are down, not looking for 1D cross
+            sell_zone_day_week = exp3.loc[today] < exp15.loc[today] and exp5.loc[today] < exp15_w.loc[today]
+
             if on_demand:
                 mtf(security,check_if_folder_exists("on_demand"),hour4,day,week,exp3,exp5,exp7,exp15,exp15_w,exp21)
-            elif exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] > exp15.loc[today]:
+            elif buy_fourH_oneD and buy_zone_day_week:
                 # BUY signal
                 mtf(security,
-                    check_if_folder_exists("4H"),
+                    check_if_folder_exists("4H/BUY"),
                     hour4,
                     day,
                     week,
@@ -126,10 +153,10 @@ def main(only_stock, on_demand, intervals, start, end):
                     exp21)
                 if security not in SIGNALS[today]["BUY"]["4H"]: SIGNALS[today]["BUY"]["4H"].append(security)
                 #draw()
-            elif exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0] and exp3.loc[today] < exp15.loc[today]:
+            elif sell_fourH_oneD and sell_zone_day_week:
                 # SELL signal
                 mtf(security,
-                    check_if_folder_exists("4H"),
+                    check_if_folder_exists("4H/SELL"),
                     hour4,
                     day,
                     week,
@@ -142,10 +169,10 @@ def main(only_stock, on_demand, intervals, start, end):
                 if security not in SIGNALS[today]["SELL"]["4H"]: SIGNALS[today]["SELL"]["4H"].append(security)
                 #check_if_folder_exists("4H")
             # Check at 1D vs 1W
-            elif exp3.loc[today] > exp15.loc[today] and exp3.loc[yesterday] < exp15.loc[yesterday] and exp5.loc[today] > exp15_w.loc[today]:
+            elif buy_oneD_oneW:
                 # BUY signal
                 mtf(security,
-                    check_if_folder_exists("1D"),
+                    check_if_folder_exists("1D/BUY"),
                     hour4,
                     day,
                     week,
@@ -158,10 +185,10 @@ def main(only_stock, on_demand, intervals, start, end):
                 if security not in SIGNALS[today]["BUY"]["1D"]: SIGNALS[today]["BUY"]["1D"].append(security)
                 #check_if_folder_exists("1D")
                 #draw()
-            elif exp3.loc[today] < exp15.loc[today] and exp3.loc[yesterday] > exp15.loc[yesterday] and exp5.loc[today] < exp15_w.loc[today]:
+            elif sell_oneD_oneW:
                 # SELL signal
                 mtf(security,
-                    check_if_folder_exists("1D"),
+                    check_if_folder_exists("1D/SELL"),
                     hour4,
                     day,
                     week,
@@ -178,17 +205,20 @@ def main(only_stock, on_demand, intervals, start, end):
             print(f"{security} does not yet have TODAY's data, try again later")
             continue
 
-    print(f"SIGNALS for {today}: \n")
-    print(f"BUY:\n")
-    print(f"\t\t4H: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['BUY']['4H'] ]}: \n")
-    print(f"\t\t1D: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['BUY']['1D'] ]}: \n")
-    print(f"SELL:\n")
-    print(f"\t\t4H: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['SELL']['4H'] ]}: \n")
-    print(f"\t\t1D: {[ f"{str(datetime.now().timestamp()).replace('.','')}: {s}" for s in SIGNALS[today]['SELL']['1D'] ]}: \n")
-    print(f"NO_OPTIONS:\n")
-    print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
-    print(f"NO_TODAY_DATA:\n")
-    print(f"\t\t{SIGNALS[today]['NO_TODAY_DATA']}: \n")
+    if not journal:
+        print(f"SIGNALS for {today}: \n")
+        print(f"NO_OPTIONS:\n")
+        print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
+        print(f"NO_TODAY_DATA:\n")
+        print(f"\t\t{SIGNALS[today]['NO_TODAY_DATA']}: \n")
+        # print(f"ATM_HUGE_SPREAD:\n")
+        # print(f"\t\t{SIGNALS[today]['ATM_HUGE_SPREAD']}: \n")
+        print(f"BUY:\n")
+        print("\t\t4H:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['BUY']['4H'] ])
+        print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['BUY']['1D'] ])
+        print(f"SELL:\n")
+        print(f"\t\t4H:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['SELL']['4H'] ])
+        print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['SELL']['1D'] ])
 
     if os.path.exists(picklename):
         backupname = picklename + '.bak'
@@ -201,17 +231,27 @@ def main(only_stock, on_demand, intervals, start, end):
 
     log_into_journal = input("Would you like me to log some trades into the JOURNAL, Sir? [y/n]")
     journal_data = []
-    if log_into_journal == 'y':
+    if log_into_journal == 'y' or journal:
         while True:
-            print("Input ID, NAME, OPEN, EXPIRATION, STRIKE, TIMEFRAME, COMMISSION\n\n")
+            print("Input ID, NAME, OPEN, EXPIRATION, STRIKE, TYPE[C/P], TIMEFRAME, COMMISSION\n\n")
             _id = input("ID: ")
             name = input("NAME: ")
             _open = input("OPEN: ")
-            exp = input("EXPIRATION: ")
+            exp = input("EXPIRATION[YYYY-MM-DD]: ")
             strike = input("STRIKE: ")
+            type_c_p = input("TYPE[C/P]: ") # calls or puts
             tmfr = input("TIMEFRAME: ")
             o_comm = input("COMMISSION: ") # open commision
-            journal_data.append([_id,name,today,_open,exp,strike,tmfr,o_comm]+[None]*7)
+            journal_data.append([_id,
+                                 name,
+                                 # if manually adding, should not automatically set to today
+                                 today if not journal else input("DATE_O[YYYY-MM-DD]: "),
+                                 _open,
+                                 exp,
+                                 strike,
+                                 type_c_p,
+                                 tmfr,
+                                 o_comm]+[None]*7)
             quit = input("Press 'quit' if you are done, or return to continue, Sir: ")
             if quit == 'quit':
                 print("This should suffice for today, Sir. See you tomorrow")
@@ -219,7 +259,24 @@ def main(only_stock, on_demand, intervals, start, end):
     else:
         print("Very well, Sir. Better luck next time.")
 
-    df = pd.DataFrame(journal_data, columns=['ID','NAME','DATE_O','OPEN','EXPIRATION','STRIKE','TIMEFRAME','COMM_O','DATE_C','CLOSE','C-O','R:R','%CAUGHT','P&L','TOTAL'])
+    entries = pd.DataFrame(journal_data, columns=['ID','NAME','DATE_O','OPEN','EXPIRATION','STRIKE','TYPE[C/P]','TIMEFRAME','COMM_O','DATE_C','CLOSE','C-O','R:R','%CAUGHT','P&L','TOTAL'])
+
+    journal_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "journal"))
+    journal_name = os.path.join(journal_dir, 'trade_journal.txt')
+
+    if os.path.exists(journal_name):
+        df = pd.concat([pd.read_csv(journal_name, header=0), entries])
+    else:
+        df = entries
+
+    if os.path.exists(journal_name):
+        backupname = journal_name + '.bak'
+        if os.path.exists(backupname):
+            os.remove(backupname)
+        os.rename(journal_name, backupname)
+    # save
+    df.to_csv(journal_name, index=False)
+
     #data.resample('D').mean().fillna(method='bfill')
     #mpf.plot(greatTime)
     #print(exp7)
