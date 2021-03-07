@@ -35,3 +35,5 @@ month performance, ytd, all
 14. Implement downloading only missing data/database
 15. Figure the error "json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
 16. Pre-filter securities qith ATM prices > 2.8, for now
+17. Draw daily some bonds information
+18. Do a daily update for positions that you have open

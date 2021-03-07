@@ -28,3 +28,49 @@ def mtf(security,path,hour4, day, week, exp3, exp5, exp7, exp15, exp15_w, exp21)
     mpf.plot(week ,type='candle',ax=ax3,axtitle='1W',addplot=five_fifteen,xrotation=0)
     plt.suptitle(f"{security.upper()}")
     plt.savefig(f'{path}/{security.upper()}.pdf',dpi=96)
+
+def elder_impulse_system(security,path,hour4,week,exp13_w):
+    """Based on MACD and a EMA directions
+
+    weekly
+    green = (EMA_current > EMA_previous) and (MACD_current > MACD_previous) 
+    red = (EMA_current < EMA_previous) and (MACD_current < MACD_previous) 
+
+    4H
+    for every_4_h in hour4:
+        calculate_weekly_elder_signal()
+        update_plot()
+
+    Original source code from TradingView
+    //
+    // @author LazyBear
+    //
+    // If you use this code in its original/modified form, do drop me a note. 
+    //
+    study("Elder Impulse System [LazyBear]", shorttitle="EIS_LB")
+    useCustomResolution=input(false, type=bool)
+    customResolution=input("D", type=resolution)
+    source = security(tickerid, useCustomResolution ? customResolution : period, close)
+    showColorBars=input(false, type=bool)
+    lengthEMA = input(13)
+    fastLength = input(12, minval=1), slowLength=input(26,minval=1)
+    signalLength=input(9,minval=1)
+
+    calc_hist(source, fastLength, slowLength) =>
+        fastMA = ema(source, fastLength)
+        slowMA = ema(source, slowLength)
+        macd = fastMA - slowMA
+        signal = sma(macd, signalLength)
+        macd - signal
+
+    get_color(emaSeries, macdHist) =>
+        g_f = (emaSeries > emaSeries[1]) and (macdHist > macdHist[1])
+        r_f = (emaSeries < emaSeries[1]) and (macdHist < macdHist[1])
+        g_f ? green : r_f ? red : blue
+        
+    b_color = get_color(ema(source, lengthEMA), calc_hist(source, fastLength, slowLength))    
+    bgcolor(b_color, transp=0)
+    barcolor(showColorBars ? b_color : na)
+
+    """
+    pass
