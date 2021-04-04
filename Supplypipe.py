@@ -14,6 +14,8 @@ import os
 
 # Setup days for the data retrieval, since we only get 730D @1h
 start_date, end_date = calculate_download_days()
+number2month = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun',
+                '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'}
 
 @click.command()
 @click.option("--only-stock",
@@ -39,7 +41,18 @@ start_date, end_date = calculate_download_days()
 @click.option("--journal-sizing",
               help="Manual size in/out of trades (which are already logged)",
               is_flag=True)
-def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_close, journal_sizing):
+@click.option("--monthly-report",
+              help="Create report for the month that you put. E.g. '3'",
+              type=int)
+def main(only_stock,
+         on_demand,
+         intervals,
+         start,
+         end,
+         journal_entry,
+         journal_close,
+         journal_sizing,
+         monthly_report):
     config = get_configuration()
     # tickers = yf.Tickers(config["SECTORS"]["technology"])
     # print(tickers.tickers.QQQ.history(period="1mo"))
@@ -76,17 +89,15 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
 
     SIGNALS[today] = {}
     SIGNALS[today]["BUY"] = {}
-    SIGNALS[today]["BUY"]["4H"] = []
     SIGNALS[today]["BUY"]["1D"] = []
     SIGNALS[today]["SELL"] = {}
-    SIGNALS[today]["SELL"]["4H"] = []
     SIGNALS[today]["SELL"]["1D"] = []
     SIGNALS[today]["NO_OPTIONS"] = []
     SIGNALS[today]["NO_TODAY_DATA"] = []
     SIGNALS[today]["ATM_HUGE_SPREAD"] = []
     for security in securities2download.replace(","," ").split():
 
-        if journal_entry:
+        if journal_entry or monthly_report:
             break
 
         ticker = yf.Ticker(security)
@@ -212,7 +223,7 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
             print(f"{security} does not yet have TODAY's data, try again later")
             continue
 
-    if not journal_entry:
+    if not journal_entry or not monthly_report:
         print(f"SIGNALS for {today}: \n")
         print(f"NO_OPTIONS:\n")
         print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
@@ -221,10 +232,8 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
         # print(f"ATM_HUGE_SPREAD:\n")
         # print(f"\t\t{SIGNALS[today]['ATM_HUGE_SPREAD']}: \n")
         print(f"BUY:\n")
-        print("\t\t4H:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['BUY']['4H'] ])
         print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['BUY']['1D'] ])
         print(f"SELL:\n")
-        print(f"\t\t4H:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['SELL']['4H'] ])
         print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['SELL']['1D'] ])
 
     if os.path.exists(picklename):
@@ -236,19 +245,36 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
     with open(picklename, "wb") as f:
         pickle.dump(SIGNALS, f, pickle.HIGHEST_PROTOCOL)
 
+    def sl_tp_helper(timeframe, name, _open):
+        if timeframe.lower() == '4h' and name.lower() == 'nq':
+            # means we use NQ @ 4H, so the SL is ~125, TP ~250
+            return round(((_open-125)),2), round(((_open+250)),2)
+        elif timeframe.lower() == '1d' and name.lower() == 'nq':
+            # means we use NQ @ 1D, so the SL is ~250, TP ~500
+            return round(((_open-250)),2), round(((_open+500)),2)
+        else:
+            # means we use options, and we want open/2
+            return round(((_open/2)),2), round(((_open*2)),2)
+
+
     log_into_journal = input("Would you like me to log some trades into the JOURNAL, Sir? [y/n]")
     journal_data = []
     if log_into_journal == 'y' or journal_entry:
         while True:
-            print("Input ID, NAME, OPEN, EXPIRATION, STRIKE, TYPE[C/P], TIMEFRAME, COMMISSION\n\n")
-            _id = input("ID: ")
+            print("Input 'ID','NAME','DATE_O','OPEN','EXPIRATION','STRIKE','SIZE','TYPE[C/P]','TIMEFRAME','COMM_O','PLANNED_SL','PLANNED_TP','PLANNED_RR','MISTAKES_O','MARKET_COND_O'\n\n")
+            _id = int(input("ID: "))
             name = input("NAME: ")
-            _open = input("OPEN: ")
+            _open = float(input("OPEN: "))
             exp = input("EXPIRATION[YYYY-MM-DD]: ")
-            strike = input("STRIKE: ")
-            type_c_p = input("TYPE[C/P]: ") # calls or puts
+            strike = int(input("STRIKE: "))
+            size = float(input("SIZE(1 default): ") or "1")
+            type_c_p = input("TYPE[C/P]: ") # calls or puts or BUY(C) or SELL (P)
             tmfr = input("TIMEFRAME: ")
-            o_comm = input("COMMISSION: ") # open commision
+            o_comm = float(input("COMMISSION: ")) # open commision
+            planned_sl, planned_tp = sl_tp_helper(tmfr, name, _open) # using loss*1:reward*2, rounding 2
+            planned_rrr = round((planned_tp/planned_sl),2)
+            mistakes_o = input("MISTAKES_O: ")
+            market_cond_o = input("MARKET_COND_O: ")
             journal_data.append([_id,
                                  name,
                                  # if manually adding, should not automatically set to today
@@ -256,9 +282,15 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
                                  _open,
                                  exp,
                                  strike,
+                                 size,
                                  type_c_p,
                                  tmfr,
-                                 o_comm]+[None]*7)
+                                 o_comm,
+                                 planned_sl,
+                                 planned_tp,
+                                 planned_rrr,
+                                 mistakes_o,
+                                 market_cond_o]+[None]*9)
             quit = input("Press 'quit' if you are done, or return to continue, Sir: ")
             if quit == 'quit':
                 print("This should suffice for today, Sir. See you tomorrow")
@@ -266,19 +298,45 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
     else:
         print("Very well, Sir. Better luck next time.")
 
-    entries = pd.DataFrame(journal_data, columns=['ID','NAME','DATE_O','OPEN','EXPIRATION','STRIKE','TYPE[C/P]','TIMEFRAME','COMM_O','DATE_C','CLOSE','C-O','R:R','%CAUGHT','P&L','TOTAL'])
+    entries = pd.DataFrame(journal_data, columns=['ID','NAME','DATE_O','OPEN','EXP','STRIKE','SIZE','TYPE[C/P]','TIMEFRAME','COMM_O','PLANNED_SL','PLANNED_TP','PLANNED_RR','MISTAKES_O','MARKET_COND_O','DATE_C','CLOSE','C-O','REAL_RR','COMM_C','%CAUGHT','MISTAKES_C','MARKET_COND_C','P&L','TOTAL'])
 
     journal_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "journal"))
     journal_name = os.path.join(journal_dir, 'trade_journal.txt')
 
     if os.path.exists(journal_name):
-        df = pd.concat([pd.read_csv(journal_name, header=0), entries])
+        df = pd.concat([pd.read_csv(journal_name, header=0, sep=";"), entries])
     else:
         df = entries
-
     # CHECK OPEN positions
 
     # Optional to close some positions
+    log_close_journal = input("Would you like me to CLOSE some trades into the JOURNAL, Sir? [y/n]")
+    if log_close_journal == 'y' or journal_close:
+        journal_data = []
+        df["ID"] = df["ID"].astype(int) # convert to int
+        df = df.set_index("ID") # set as index for easier access
+        # print to master the id, name of all open positions (where DATE_C is NA)
+        print('These are the current open positions:')
+        print('ID\tNAME\tDATE_O\tOPEN')
+        print("\n".join([f"{id}: {df.loc[id,'NAME']}\t{df.loc[id,'DATE_O']}\t{df.loc[id,'OPEN']}" for id in df[ df["DATE_C"].isnull() ].index.tolist() ]))
+        while True:
+            id2close = intput("WHAT ID should I close?: ")
+            df.loc[id2close,'DATE_C'] = input("DATE_C[YYYY-MM-DD]: ")
+            df.loc[id2close,'CLOSE'] = float(input("CLOSE: "))
+            df.loc[id2close,'C-O'] = df.loc[id2close,'CLOSE'] - df.loc[id2close,'OPEN']
+            df.loc[id2close,'REAL_RR'] = round((df.loc[id2close,'CLOSE']/df.loc[id2close,'PLANNED_SL']),2)
+            df.loc[id2close,'COMM_C'] = float(input("COMM_C: "))
+            df.loc[id2close,'%CAUGHT'] = float(input("%CAUGHT: "))
+            df.loc[id2close,'MISTAKES_C'] = input("MISTAKES_C: ")
+            df.loc[id2close,'MARKET_COND_C'] = input("MARKET_COND_C: ")
+            df.loc[id2close,'P&L'] = float(input("P&L: "))
+            df.loc[id2close,'TOTAL'] = df.loc[id2close,'P&L'] - df.loc[id2close,'COMM_C'] - df.loc[id2close,'COMM_O']
+            quit = input("Press 'quit' if you are done, or return to continue, Sir: ")
+            if quit == 'quit':
+                print("This should suffice for today, Sir. See you tomorrow")
+                break
+    else:
+        print("Very well, Sir. Better luck next time.")
 
     if os.path.exists(journal_name):
         backupname = journal_name + '.bak'
@@ -286,7 +344,20 @@ def main(only_stock, on_demand, intervals, start, end, journal_entry, journal_cl
             os.remove(backupname)
         os.rename(journal_name, backupname)
     # save
-    df.to_csv(journal_name, index=False)
+    df.to_csv(journal_name, index=False, sep=";")
+
+    if monthly_report:
+        df = pd.read_csv(journal_name, header=0, sep=";")
+        df["DATE_O"]=pd.to_datetime(df['DATE_O'])
+        slicer = df.loc[(df['DATE_O'].dt.month == monthly_report)]
+        nq = df.loc[(df["NAME"] == 'NQ')]
+        options = df.loc[~(df["NAME"] == 'NQ')] # all except NQ
+        trading_days = len(df["DATE_O"].unique().tolist())
+        print(slicer)
+        breakpoint()
+        # separate NQ
+
+        # the rest are options
 
     #data.resample('D').mean().fillna(method='bfill')
     #mpf.plot(greatTime)
