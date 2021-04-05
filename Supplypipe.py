@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import pandas as pd
 from datetime import timedelta, date, datetime
 from pandas.tseries.offsets import BDay # business days
+from pandas.tseries.offsets import MonthEnd
 import pickle
 import os
 
@@ -352,9 +353,52 @@ def main(only_stock,
         slicer = df.loc[(df['DATE_O'].dt.month == monthly_report)]
         nq = df.loc[(df["NAME"] == 'NQ')]
         options = df.loc[~(df["NAME"] == 'NQ')] # all except NQ
-        trading_days = len(df["DATE_O"].unique().tolist())
-        print(slicer)
-        breakpoint()
+        month_day_start = f"{datetime.today().year}-0{monthly_report}-01"
+        month_day_end = f'{(pd.to_datetime(month_day_start, format="%Y-%m-%d") + MonthEnd(1)).strftime("%Y-%m-%d")}'
+        total_trading_days = len(pd.date_range(month_day_start, month_day_end, freq=BDay()))
+        # = len(df["DATE_O"].unique().tolist())
+        winning_days = len(slicer[slicer["TOTAL"]>=0]["DATE_O"].unique())
+        losing_days = len(slicer[slicer["TOTAL"]<0]["DATE_O"].unique())
+        #avg_winning_days
+        #avg_losing_days
+        total_trades = len(slicer.index)
+        winning_trades = len(slicer[slicer["TOTAL"]>=0])
+        losing_trades = len(slicer[slicer["TOTAL"]<0])
+        avg_winning_trades = slicer[slicer["TOTAL"]>=0]["TOTAL"].mean()
+        avg_losing_trades = slicer[slicer["TOTAL"]<0]["TOTAL"].mean()
+        planned_rrr = slicer["PLANNED_RR"].mean()
+        realized_rrr = slicer["REAL_RR"].mean()
+        max_gain = slicer["TOTAL"].max()
+        max_loss = slicer["TOTAL"].min()
+        mistakes_o = slicer["MISTAKES_O"].dropna(how='all').values.flatten().tolist()
+        mistakes_c = slicer["MISTAKES_C"].dropna(how='all').values.flatten().tolist()
+        market_cond_o = slicer["MARKET_COND_O"].dropna(how='all').values.flatten().tolist()
+        market_cond_c = slicer["MARKET_COND_C"].dropna(how='all').values.flatten().tolist()
+        avg_size = slicer["SIZE"].mean()
+        avg_winning_size = slicer[slicer["TOTAL"]>=0]["SIZE"].mean()
+        avg_losing_size = slicer[slicer["TOTAL"]<0]["SIZE"].mean()
+        total_month = slicer["TOTAL"].sum()
+        print(f"REPORT for YEAR {datetime.today().year}, MONTH {monthly_report}: ")
+        print(f"total_trading_days: {total_trading_days}")
+        print(f"winning_days: {winning_days}")
+        print(f"losing_days: {losing_days}")
+        print(f"total_trades: {total_trades}")
+        print(f"winning_trades: {winning_trades}")
+        print(f"losing_trades: {losing_trades}")
+        print(f"avg_winning_trades: {avg_winning_trades}")
+        print(f"avg_losing_trades: {avg_losing_trades}")
+        print(f"planned_rrr: {planned_rrr}")
+        print(f"realized_rrr: {realized_rrr}")
+        print(f"max_gain: {max_gain}")
+        print(f"max_loss: {max_loss}")
+        print(f"mistakes opening: {mistakes_o}")
+        print(f"mistakes closing: {mistakes_c}")
+        print(f"market condition open: {market_cond_o}")
+        print(f"market condition close: {market_cond_c}")
+        print(f"avg_size: {avg_size}")
+        print(f"avg_winning_size: {avg_winning_size}")
+        print(f"avg_losing_size: {avg_losing_size}")
+        print(f"total month: {total_month}")
         # separate NQ
 
         # the rest are options
