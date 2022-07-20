@@ -5,8 +5,8 @@ def download(list_of_securities, intervals, **kwargs):
 
 	intervals = intervals.replace(',',' ').split()
 	start_date4H, end_date4H = calculate_download_days(29)
-	start_date1D, end_date1D = calculate_download_days(60)
-	start_date1W, end_date1W = calculate_download_days(240)
+	start_date1D, end_date1D = calculate_download_days(370)
+	start_date1W, end_date1W = calculate_download_days(700)
 
 	h = yf.download(list_of_securities,
 					   group_by='ticker',
@@ -15,7 +15,7 @@ def download(list_of_securities, intervals, **kwargs):
 					   period='max',
 		               #**kwargs)
 		               start=start_date4H,
-		               end=end_date4H)
+		               end=end_date4H,threads = False)
 		               #prepost = True)
 
 	D = yf.download(list_of_securities,
@@ -25,7 +25,7 @@ def download(list_of_securities, intervals, **kwargs):
 					   period='max',
 		               start=start_date1D,
 		               end=end_date1D,
-		               prepost = True)
+		               prepost = True,threads = False)
 
 	W = yf.download(list_of_securities,
 					   group_by='ticker',
@@ -34,6 +34,6 @@ def download(list_of_securities, intervals, **kwargs):
 					   period='max',
 		               start=start_date1W,
 		               end=end_date1W,
-		               prepost = True)
+		               prepost = True,threads = False)
 
 	return h, D, W
