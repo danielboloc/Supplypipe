@@ -144,38 +144,6 @@ def main(only_stock,
             print(f"{security} does not yet have TODAY's data, try again later")
             continue
 
-
-    # multi-time analysis
-        # 4h-1D; 4h-1W; 4h-1D-1W
-        # price range for what price movement you can expect
-        # How long you should hold
-        # What combination of EMAs & timeframes is the best for profits
-        # option study or movement in underlying with premium
-        # Provide trade scoring system
-        # buy 1D, 1W at each cross
-
-    # signals
-
-    # journal
-        # insert manually
-        # accept ID of proposed positions
-
-    # Alerts, logs, confirmation for positions
-
-    # monthly reports
-        # Add profits & days held
-        # Divide by year, all, custom time   
-
-        # for security in config["SECTORS"][sector].split(", "):
-        #     df = data[security]
-        #     fig = go.Figure(data=[go.Candlestick(x=df.loc['2021-01-01':'2021-02-18'],
-        #                     open=df['Open'],
-        #                     high=df['High'],
-        #                     low=df['Low'],
-        #                     close=df['Close'])])
-
-        #     fig.show()
-
 if __name__ == '__main__':
     main()
 
