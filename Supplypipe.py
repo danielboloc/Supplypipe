@@ -55,9 +55,6 @@ def main(only_stock,
          journal_sizing,
          monthly_report):
     config = get_configuration()
-    # tickers = yf.Tickers(config["SECTORS"]["technology"])
-    # print(tickers.tickers.QQQ.history(period="1mo"))
-    # print(tickers.tickers.QQQ.major_holders)
     if only_stock:
         securities2download = config["STOCKS"]["securities"] # str
     elif on_demand:
@@ -65,11 +62,6 @@ def main(only_stock,
     else:
         securities2download = list2str(list(config["SECTORS"].values())) # str
 
-    # prepare options for API
-    # options = {'start': determine_period(start, intervals),
-    #            'end': determine_period(end, intervals)}
-
-    #hour, day, week = download(securities2download, intervals, **options)
     weekday = datetime.today().weekday() # returns a number: 5,6->Sat,Sun
     # if running on a weekend, will consider as friday
     if 5 <= weekday >= 6:
@@ -101,14 +93,8 @@ def main(only_stock,
         }
         hour4 = hour.resample('4H').agg(ohlc_dict).dropna()
         # if using the premarket, filter outliers
-        # from scipy import stats
-        # import numpy as np
-        # hour4 = hour4[(np.abs(stats.zscore(hour4)) < 3).all(axis=1)]
-        #hour42 = hour.resample('4H').mean().dropna()
         oneD = hour.resample('B').mean() # business day
         # plot data with EMAs
-            # if is too large split by year
-
         exp3 = day['Close'].ewm(span=3, adjust=True).mean()
         exp5 = week['Close'].ewm(span=5, adjust=True).mean()
         exp7 = hour4['Close'].ewm(span=7, adjust=True).mean() 
@@ -120,59 +106,13 @@ def main(only_stock,
         # Check at 4h vs 1D
         try:
             # datetime instead of just date -> gives error
-            #print(f"exp7.loc[today].tail(-1)[0]: {exp21.loc[today].tail(-1)[0]}") # 2021-04-14 12:00:00-04:00
-            #print(f"exp7.loc[yesterday].tail(-1)[0]: {exp7.loc[yesterday].tail(-1)[0]}") # 2021-04-14 12:00:00-04:00
-            # no error
-            # print(f"exp3.loc[today]: {exp3.loc[today]}")
-            # print(f"exp15.loc[today]: {exp15.loc[today]}")
-            # print(f"exp3.loc[yesterday]: {exp3.loc[yesterday]}")
-            # print(f"exp15.loc[yesterday]: {exp15.loc[yesterday]}")
-            # print(f"exp5.loc[today]: {exp5.loc[today]}")
-            # print(f"exp15_w.loc[today]: {exp15_w.loc[today]}")
-
-            #buy_fourH_oneD = exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0]
-            #sell_fourH_oneD = exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0]
             buy_oneD_oneW = exp3.loc[today] > exp15.loc[today] and exp3.loc[yesterday] < exp15.loc[yesterday] and exp5.loc[today] > exp15_w.loc[today]
             sell_oneD_oneW = exp3.loc[today] < exp15.loc[today] and exp3.loc[yesterday] > exp15.loc[yesterday] and exp5.loc[today] < exp15_w.loc[today]
             # make sure both the 1d and 1w are up, not looking for 1D cross
-            #buy_zone_day_week = exp3.loc[today] > exp15.loc[today] and exp5.loc[today] > exp15_w.loc[today]
             # make sure both the 1d and 1w are down, not looking for 1D cross
-            #sell_zone_day_week = exp3.loc[today] < exp15.loc[today] and exp5.loc[today] < exp15_w.loc[today]
 
             if on_demand:
                 mtf(security,check_if_folder_exists("on_demand"),hour4,day,week,exp3,exp5,exp7,exp15,exp15_w,exp21)
-            # Discontinued 4H buying and selling
-            # elif buy_fourH_oneD and buy_zone_day_week:
-            #     # BUY signal
-            #     mtf(security,
-            #         check_if_folder_exists("4H/BUY"),
-            #         hour4,
-            #         day,
-            #         week,
-            #         exp3,
-            #         exp5,
-            #         exp7,
-            #         exp15,
-            #         exp15_w,
-            #         exp21)
-            #     if security not in SIGNALS[today]["BUY"]["4H"]: SIGNALS[today]["BUY"]["4H"].append(security)
-            #     #draw()
-            # elif sell_fourH_oneD and sell_zone_day_week:
-            #     # SELL signal
-            #     mtf(security,
-            #         check_if_folder_exists("4H/SELL"),
-            #         hour4,
-            #         day,
-            #         week,
-            #         exp3,
-            #         exp5,
-            #         exp7,
-            #         exp15,
-            #         exp15_w,
-            #         exp21)
-            #     if security not in SIGNALS[today]["SELL"]["4H"]: SIGNALS[today]["SELL"]["4H"].append(security)
-            #     #check_if_folder_exists("4H")
-            # Check at 1D vs 1W
             elif buy_oneD_oneW:
                 # BUY signal
                 mtf(security,
@@ -186,8 +126,6 @@ def main(only_stock,
                     exp15,
                     exp15_w,
                     exp21)
-                #check_if_folder_exists("1D")
-                #draw()
             elif sell_oneD_oneW:
                 # SELL signal
                 mtf(security,
@@ -206,11 +144,6 @@ def main(only_stock,
             print(f"{security} does not yet have TODAY's data, try again later")
             continue
 
-
-    #data.resample('D').mean().fillna(method='bfill')
-    #mpf.plot(greatTime)
-    #print(exp7)
-    #print(exp21)
 
     # multi-time analysis
         # 4h-1D; 4h-1W; 4h-1D-1W
