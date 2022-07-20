@@ -78,24 +78,7 @@ def main(only_stock,
     else:
         today = date.today().strftime("%Y-%m-%d")
         yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
-    #print(f"today: {today}; yesterday: {yesterday}")
-    directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "history"))
-    picklename = os.path.join(directory, 'supply_trades.pickle')
 
-    if os.path.exists(picklename):
-        with open(picklename, 'rb') as f:
-            SIGNALS = pickle.load(f)
-    else:
-        SIGNALS = dict()
-
-    SIGNALS[today] = {}
-    SIGNALS[today]["BUY"] = {}
-    SIGNALS[today]["BUY"]["1D"] = []
-    SIGNALS[today]["SELL"] = {}
-    SIGNALS[today]["SELL"]["1D"] = []
-    SIGNALS[today]["NO_OPTIONS"] = []
-    SIGNALS[today]["NO_TODAY_DATA"] = []
-    SIGNALS[today]["ATM_HUGE_SPREAD"] = []
     for security in securities2download.replace(","," ").split():
 
         if journal_entry or monthly_report:
@@ -107,13 +90,8 @@ def main(only_stock,
             try:
                 ticker.options
             except IndexError:
-                SIGNALS[today]["NO_OPTIONS"].append(security)
                 print(f"{security} does not have options, skipping...")
                 continue
-            # else:
-            #     if bid_ask_spread(ticker): # determine if I should skip this ticker
-            #         SIGNALS[today]["ATM_HUGE_SPREAD"].append(security)
-            #         continue
 
         print(f"Security download: {security}")
         hour, day, week = download(security, intervals)
@@ -211,7 +189,6 @@ def main(only_stock,
                     exp15,
                     exp15_w,
                     exp21)
-                if security not in SIGNALS[today]["BUY"]["1D"]: SIGNALS[today]["BUY"]["1D"].append(security)
                 #check_if_folder_exists("1D")
                 #draw()
             elif sell_oneD_oneW:
@@ -227,34 +204,10 @@ def main(only_stock,
                     exp15,
                     exp15_w,
                     exp21)
-                if security not in SIGNALS[today]["SELL"]["1D"]: SIGNALS[today]["SELL"]["1D"].append(security)
 
         except (KeyError, IndexError) as e:
-            SIGNALS[today]["NO_TODAY_DATA"].append(security)
             print(f"{security} does not yet have TODAY's data, try again later")
             continue
-
-    if not journal_entry or not monthly_report:
-        print(f"SIGNALS for {today}: \n")
-        print(f"NO_OPTIONS:\n")
-        print(f"\t\t{SIGNALS[today]['NO_OPTIONS']}: \n")
-        print(f"NO_TODAY_DATA:\n")
-        print(f"\t\t{SIGNALS[today]['NO_TODAY_DATA']}: \n")
-        # print(f"ATM_HUGE_SPREAD:\n")
-        # print(f"\t\t{SIGNALS[today]['ATM_HUGE_SPREAD']}: \n")
-        print(f"BUY:\n")
-        print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['BUY']['1D'] ])
-        print(f"SELL:\n")
-        print(f"\t\t1D:\n %s\n" % [ f'{str(datetime.now().timestamp()).replace(".","")}: {s}' for s in SIGNALS[today]['SELL']['1D'] ])
-
-    if os.path.exists(picklename):
-        backupname = picklename + '.bak'
-        if os.path.exists(backupname):
-            os.remove(backupname)
-        os.rename(picklename, backupname)
-    # save
-    with open(picklename, "wb") as f:
-        pickle.dump(SIGNALS, f, pickle.HIGHEST_PROTOCOL)
 
     def sl_tp_helper(timeframe, name, _open):
         if timeframe.lower() == '4h' and name.lower() == 'nq':
