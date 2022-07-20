@@ -78,7 +78,7 @@ def main(only_stock,
     else:
         today = date.today().strftime("%Y-%m-%d")
         yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
-
+    #print(f"today: {today}; yesterday: {yesterday}")
     directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "history"))
     picklename = os.path.join(directory, 'supply_trades.pickle')
 
@@ -136,7 +136,7 @@ def main(only_stock,
 
         exp3 = day['Close'].ewm(span=3, adjust=True).mean()
         exp5 = week['Close'].ewm(span=5, adjust=True).mean()
-        exp7 = hour4['Close'].ewm(span=7, adjust=True).mean()
+        exp7 = hour4['Close'].ewm(span=7, adjust=True).mean() 
         exp15 = day['Close'].ewm(span=15, adjust=True).mean()
         exp15_w = week['Close'].ewm(span=15, adjust=True).mean()
         exp21 = hour4['Close'].ewm(span=21, adjust=True).mean()
@@ -144,15 +144,25 @@ def main(only_stock,
         # only business day
         # Check at 4h vs 1D
         try:
+            # datetime instead of just date -> gives error
+            #print(f"exp7.loc[today].tail(-1)[0]: {exp21.loc[today].tail(-1)[0]}") # 2021-04-14 12:00:00-04:00
+            #print(f"exp7.loc[yesterday].tail(-1)[0]: {exp7.loc[yesterday].tail(-1)[0]}") # 2021-04-14 12:00:00-04:00
+            # no error
+            # print(f"exp3.loc[today]: {exp3.loc[today]}")
+            # print(f"exp15.loc[today]: {exp15.loc[today]}")
+            # print(f"exp3.loc[yesterday]: {exp3.loc[yesterday]}")
+            # print(f"exp15.loc[yesterday]: {exp15.loc[yesterday]}")
+            # print(f"exp5.loc[today]: {exp5.loc[today]}")
+            # print(f"exp15_w.loc[today]: {exp15_w.loc[today]}")
 
-            buy_fourH_oneD = exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0]
-            sell_fourH_oneD = exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0]
+            #buy_fourH_oneD = exp7.loc[today].tail(-1)[0] > exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] < exp21.loc[yesterday].tail(-1)[0]
+            #sell_fourH_oneD = exp7.loc[today].tail(-1)[0] < exp21.loc[today].tail(-1)[0] and exp7.loc[yesterday].tail(-1)[0] > exp21.loc[yesterday].tail(-1)[0]
             buy_oneD_oneW = exp3.loc[today] > exp15.loc[today] and exp3.loc[yesterday] < exp15.loc[yesterday] and exp5.loc[today] > exp15_w.loc[today]
             sell_oneD_oneW = exp3.loc[today] < exp15.loc[today] and exp3.loc[yesterday] > exp15.loc[yesterday] and exp5.loc[today] < exp15_w.loc[today]
             # make sure both the 1d and 1w are up, not looking for 1D cross
-            buy_zone_day_week = exp3.loc[today] > exp15.loc[today] and exp5.loc[today] > exp15_w.loc[today]
+            #buy_zone_day_week = exp3.loc[today] > exp15.loc[today] and exp5.loc[today] > exp15_w.loc[today]
             # make sure both the 1d and 1w are down, not looking for 1D cross
-            sell_zone_day_week = exp3.loc[today] < exp15.loc[today] and exp5.loc[today] < exp15_w.loc[today]
+            #sell_zone_day_week = exp3.loc[today] < exp15.loc[today] and exp5.loc[today] < exp15_w.loc[today]
 
             if on_demand:
                 mtf(security,check_if_folder_exists("on_demand"),hour4,day,week,exp3,exp5,exp7,exp15,exp15_w,exp21)
@@ -271,7 +281,7 @@ def main(only_stock,
             size = float(input("SIZE(1 default): ") or "1")
             type_c_p = input("TYPE[C/P]: ") # calls or puts or BUY(C) or SELL (P)
             tmfr = input("TIMEFRAME: ")
-            o_comm = float(input("COMMISSION: ")) # open commision
+            o_comm = float(input("COMM_O: ")) # open commision
             planned_sl, planned_tp = sl_tp_helper(tmfr, name, _open) # using loss*1:reward*2, rounding 2
             planned_rrr = round((planned_tp/planned_sl),2)
             mistakes_o = input("MISTAKES_O: ")
@@ -291,7 +301,7 @@ def main(only_stock,
                                  planned_tp,
                                  planned_rrr,
                                  mistakes_o,
-                                 market_cond_o]+[None]*9)
+                                 market_cond_o]+[None]*10)
             quit = input("Press 'quit' if you are done, or return to continue, Sir: ")
             if quit == 'quit':
                 print("This should suffice for today, Sir. See you tomorrow")
@@ -321,7 +331,7 @@ def main(only_stock,
         print('ID\tNAME\tDATE_O\tOPEN')
         print("\n".join([f"{id}: {df.loc[id,'NAME']}\t{df.loc[id,'DATE_O']}\t{df.loc[id,'OPEN']}" for id in df[ df["DATE_C"].isnull() ].index.tolist() ]))
         while True:
-            id2close = intput("WHAT ID should I close?: ")
+            id2close = int(input("WHAT ID should I close?: "))
             df.loc[id2close,'DATE_C'] = input("DATE_C[YYYY-MM-DD]: ")
             df.loc[id2close,'CLOSE'] = float(input("CLOSE: "))
             df.loc[id2close,'C-O'] = df.loc[id2close,'CLOSE'] - df.loc[id2close,'OPEN']
