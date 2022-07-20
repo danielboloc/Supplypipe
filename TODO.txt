@@ -38,3 +38,4 @@ month performance, ytd, all
 17. Draw daily some bonds information
 18. Do a daily update for positions that you have open
 19. Add long term positions?
+20. Fix: on Friday 2021-04-02 was closed the market, and now it gives erro, since "yesterday" has no data
