@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import yfinance as yf
 from supplypipe.utils import calculate_download_days
 
