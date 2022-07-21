@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import re, os
 import numpy as np
 from datetime import timedelta, date, datetime
+from pandas.tseries.offsets import BDay # business days
 
 def str2list(string):
     # remove multiple whitespaces to just leave one
@@ -20,6 +23,34 @@ def calculate_download_days(days=729):
     start_date = (date.today() - timedelta(days=days)).strftime('%Y-%m-%d')
 
     return start_date, end_date
+
+def determine_today_yesterday():
+    weekday = datetime.today().weekday() # returns a number: 5,6->Sat,Sun
+    # if running on a weekend, will consider as friday
+    if 5 <= weekday >= 6:
+        today = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+        yesterday = (date.today() - BDay(2)).strftime("%Y-%m-%d")
+    else:
+        today = date.today().strftime("%Y-%m-%d")
+        yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+
+    return today, yesterday
+
+def setup_ohlc():
+    """Return a dictionary containing settings for:
+        - open
+        - high
+        - low
+        - close
+        - volume
+    """
+    return {
+        'Open':'first',
+        'High':'max',
+        'Low':'min',
+        'Close': 'last',
+        'Volume': 'sum'
+    }
 
 def determine_period(date, intervals):
 
