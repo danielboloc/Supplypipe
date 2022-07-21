@@ -162,8 +162,7 @@ def bid_ask_spread(ticker):
             # only looking at calls NOT puts, but vollatility should be similar
             calls = opt.calls
             # get those call out of the money (they do not have intrinsic value)
-            OTM = calls[ calls['inTheMoney']==False ][ ['bid','ask'] ]
-                    .reset_index(drop=True)
+            OTM = calls[ calls['inTheMoney']==False ][ ['bid','ask'] ].reset_index(drop=True)
             try:
                 ask = OTM.loc[0][1] # get ask
                 bid = OTM.loc[0][0] # get bid
