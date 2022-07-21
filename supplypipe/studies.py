@@ -60,6 +60,8 @@ def oneDay_oneWeek(security, intervals, on_demand=""):
                 exp3, exp5, exp7, exp15, exp15_w, exp21)
     except (KeyError, IndexError) as e:
         print(f"{security} does not yet have TODAY's data, try again later")
+    else:
+        print("Data succesfully retrieved")
 
 def fourHour_oneDay():
     """Use 4H and 1D. Consider 1D as the bigger frame 'tide'.

@@ -19,6 +19,9 @@ def get_configuration():
 	""""
 	Reads configuration files. It had a default, useful for version control
 	with default values, and another configuration of a user interpretation
+
+	:returns: stock sectors
+	:rtype: config object
 	"""
 
 	if os.path.exists(conf_app):
