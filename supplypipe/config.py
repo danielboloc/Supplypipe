@@ -16,11 +16,14 @@ config = cfp.ConfigParser()
 # read configuration ("app.conf" or "default.conf")
 # look for app.conf
 def get_configuration():
+	""""
+	Reads configuration files. It had a default, useful for version control
+	with default values, and another configuration of a user interpretation
+	"""
+
 	if os.path.exists(conf_app):
 		config.read(conf_app)
 	else:
 		config.read(conf_def)
 
 	return config
-
-#print(config["SECTORS"]["technology"])

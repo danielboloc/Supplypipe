@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from supplypipe.config import get_configuration
-from supplypipe.studies import oneDay_oneWeek
-from supplypipe.utils import list2str, calculate_download_days, determine_period
-import yfinance as yf
-import click
-import plotly.graph_objects as go
-import pandas as pd
-from datetime import timedelta, date, datetime
-from pandas.tseries.offsets import MonthEnd
-import pickle
 import os
+import click
+import pandas as pd
+import yfinance as yf
+import plotly.graph_objects as go
+from supplypipe.studies import oneDay_oneWeek
+from datetime import timedelta, date, datetime
+from supplypipe.config import get_configuration
+from supplypipe.utils import list2str, calculate_download_days, determine_period
 
 # Setup days for the data retrieval, since we only get 730D @1h
 start_date, end_date = calculate_download_days()
@@ -24,7 +22,7 @@ start_date, end_date = calculate_download_days()
               help="""You can put the ticker symbol, e.g MSFT or multiple 'MSFT,
                       AAPL'""")
 @click.option("--intervals",
-              help="Two intervals for multi-timeframe analysis",
+              help="Three intervals for multi-timeframe analysis",
               default='60m 1d 1wk')
 @click.option("--start",
               help="""Start date of data retrieval. The analysis will be

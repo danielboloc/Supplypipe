@@ -6,10 +6,18 @@ from supplypipe.utils import check_if_folder_exists, setup_ohlc, \
                              determine_today_yesterday
 
 def oneDay_oneWeek(security, intervals, on_demand=""):
-    """Use 1D and 1W. Consider 1W as the bigger frame 'tide'.
-    Consider the 1D, as the 'wave'. Meanwhile the 1W is crossed
-    UP, you can only buy at 1D
     """
+    Use 1D and 1W in terms of the EMA crossovers. Consider 1W as the bigger
+    frame 'tide'. Consider the 1D, as the 'wave'. Meanwhile the 1W is crossed
+    UP, you can only buy at 1D
+
+    :param str security: name of the stock/s
+    :param intervals: time intervals, e.g. '60m 1d 1wk' (normally comes from the
+    use command line arguments)
+    :param str on_demand: will not take into consideration the securities of the
+    config and will not take into account the EMA conditions for crossover
+    """
+
     today, yesterday = determine_today_yesterday()
 
     print(f"Downloading security: {security}")
