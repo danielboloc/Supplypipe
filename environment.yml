@@ -10,8 +10,8 @@ dependencies:
   - numpy
   - requests
   - pip
-  - mplfinance
   - pip:
     - urllib3
     - yfinance
+    - mplfinance
 
