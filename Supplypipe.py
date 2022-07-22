@@ -17,7 +17,7 @@ start_date, end_date = calculate_download_days()
 @click.command()
 @click.option("--only-stock",
               is_flag=True,
-              help="To only look at the 'stock' section in config")
+              help="To only look at the 'stocks' section in config")
 @click.option("--on-demand",
               help="""You can put the ticker symbol, e.g MSFT or multiple 'MSFT,
                       AAPL'""")
@@ -32,11 +32,13 @@ start_date, end_date = calculate_download_days()
               help="End date of data retrieval",
               default=end_date) # today
 def main(only_stock, on_demand, intervals, start, end):
+
     # Setup configuration files
     config = get_configuration()
+
     # Look at only 'STOCKS' section in the config
     if only_stock:
-        securities2download = config["STOCKS"]["securities"]
+        securities2download = config["SECTORS"]["stocks"]
     # Only apply the study for the command-line argument/s passed
     elif on_demand:
         securities2download = on_demand
