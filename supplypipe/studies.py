@@ -34,6 +34,16 @@ def oneDay_oneWeek(security, intervals, on_demand=""):
     exp15_w = week['Close'].ewm(span=15, adjust=True).mean()
     exp21 = hour4['Close'].ewm(span=21, adjust=True).mean()
 
+    if on_demand:
+        # do only plot with whatever results are for the given dates
+        print(f"\nGenerating plot on demand for {security}. The current " + \
+              "strategies are plotted, but are not checked if their " + \
+              "rules/conditions apply.")
+        mtf(security, check_if_folder_exists("on_demand"), hour4, day, week,
+            exp3,exp5,exp7,exp15,exp15_w,exp21)
+
+        return
+
     try:
         # check whether 1D > 1W using 'today' and 'yesterday' EMA values
         # this will mean a positive result equivalent to buying
@@ -46,22 +56,21 @@ def oneDay_oneWeek(security, intervals, on_demand=""):
                          exp3.loc[yesterday] > exp15.loc[yesterday] and \
                          exp5.loc[today] < exp15_w.loc[today]
 
-        if on_demand:
-            # do only plot with whatever results are for the given dates
-            mtf(security, check_if_folder_exists("on_demand"), hour4, day, week,
-                exp3,exp5,exp7,exp15,exp15_w,exp21)
-        elif buy_oneD_oneW:
+        if buy_oneD_oneW:
             # BUY signal
             mtf(security, check_if_folder_exists("1D/BUY"), hour4, day, week,
                 exp3, exp5, exp7, exp15, exp15_w, exp21)
+            print(f"Checks conditions in the BUY direction of current strategy")
         elif sell_oneD_oneW:
             # SELL signal
             mtf(security, check_if_folder_exists("1D/SELL"), hour4, day, week,
                 exp3, exp5, exp7, exp15, exp15_w, exp21)
+            print(f"Checks conditions in the SELL direction of current strategy")
+        else:
+            print("Conditions of current strategy cannot be satisfied " +\
+                  f"for {security} ... exiting")
     except (KeyError, IndexError) as e:
         print(f"{security} does not yet have TODAY's data, try again later")
-    else:
-        print("Data succesfully retrieved")
 
 def fourHour_oneDay():
     """Use 4H and 1D. Consider 1D as the bigger frame 'tide'.
