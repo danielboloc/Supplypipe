@@ -25,7 +25,7 @@ def list2str(l):
     :returns: string representation of the list
     :rtype: str
     """
-    return " ".join(" ".join(l).replace(",", " ").split())
+    return " ".join(" ".join(l).replace(" ", "").split())
 
 def calculate_download_days(days=729):
     """
