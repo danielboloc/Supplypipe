@@ -57,6 +57,7 @@ def determine_today_yesterday():
     """
 
     weekday = datetime.today().weekday() # returns a number: 5,6->Sat,Sun
+    hour = datetime.today().hour
     # if running on a weekend, will consider as friday
     if 5 <= weekday >= 6:
         today = (date.today() - BDay(1)).strftime("%Y-%m-%d")
@@ -64,6 +65,11 @@ def determine_today_yesterday():
     else:
         today = date.today().strftime("%Y-%m-%d")
         yesterday = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+
+    # if run before the start of the trading day
+    if hour <= 16: # market is closed
+        today = (date.today() - BDay(1)).strftime("%Y-%m-%d")
+        yesterday = (date.today() - BDay(2)).strftime("%Y-%m-%d")
 
     return today, yesterday
 
