@@ -168,16 +168,16 @@ docker run \
 
 # Results
 
-Running this package you will get one or multiple plots depending on the arguments passed. The plot has four sections:
+Running this package you will get one or multiple plots depending on the arguments passed. The next sections are generated for `AAPL`:
 
-- **first section**: 4H timeframe with EMA(3) and EMA(15) at 4H
-[4H]
-- **second section**: 1D timeframe with EMA(3) and EMA(15) at 1D
-[1D]
-- **thirs section**: 1W timeframe with EMA(5) and EMA(15) at 1W
-[1W]
-- **fourth section**: volume bars for 1D timeframe
-[V]
+- **first section**: 4H timeframe with EMA(3) and EMA(15) at 4H. The candles are very clear and the EMA crossover is also clear (`red` line is above `green`).
+![4H](./docs/images/chart_4H.png)
+- **second section**: 1D timeframe with EMA(3) and EMA(15) at 1D. The candles are more abundant, but the time window is bigger.
+![1D](./docs/images/chart_1D.png)
+- **thirs section**: 1W timeframe with EMA(5) and EMA(15) at 1W. The candles are very clear, with the same time window as 1D.
+![1W](./docs/images/chart_1W.png)
+- **fourth section**: volume bars for 1D timeframe.
+![V](./docs/images/chart_volume.png)
 
 # Disclaimer
 
@@ -189,7 +189,6 @@ The information contained herein is not intended to be a source of advice or inv
 [candle]: https://www.investopedia.com/terms/c/candlestick.asp
 [cross]: https://www.investopedia.com/articles/active-trading/052014/how-use-moving-average-buy-stocks.asp
 [volume]: https://www.investopedia.com/terms/v/volume.asp
-![4H](./docs/images/chart_4H.png)
-![1D](./docs/images/chart_1D.png)
-![1W](./docs/images/chart_1E.png)
-![V](./docs/images/chart_volume.png)
+
+
+
