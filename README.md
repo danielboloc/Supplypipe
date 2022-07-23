@@ -122,26 +122,44 @@ docker run \
     -c "python -m unittest discover"
 ```
 
-## Run using Docker image
+## Run examples
 
-Use `AAPL` on demand:
+Use `AAPL` on demand.
 
+Locally:
+```
+python Supplypipe.py --on-demand AAPL
+```
+
+Docker:
 ```bash
 docker run \
     --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
     dboloc/supplypipe:v1.0.0 --on-demand AAPL
 ```
 
-Run in for all securities in the `[SECTORS][stocks]` config:
+Run in for all securities in the `[SECTORS][stocks]` config.
 
+Locally:
+```
+python Supplypipe.py --only-stock
+```
+
+Docker:
 ```bash
 docker run \
     --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
     dboloc/supplypipe:v1.0.0 --only-stock
 ```
 
-Run in for all sectors in `[SECTORS]` config:
+Run in for all sectors in `[SECTORS]` config.
 
+Locally:
+```
+python Supplypipe.py
+```
+
+Docker:
 ```bash
 docker run \
     --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
