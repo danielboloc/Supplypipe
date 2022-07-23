@@ -96,7 +96,7 @@ Options:
   --help            Show this message and exit.
 ```
 
-Using `--on_demand` will not take into account the strategy/ies logic although it will plot all components. This parameter is just to see the price action of the stock/s.
+Using `--on-demand` will not take into account the strategy/ies logic although it will plot all components. This parameter is just to see the price action of the stock/s.
 
 Using `--only-stock` parameter will only consider the securities in the `stocks` section under `SECTORS` in `config/default.conf`.
 
