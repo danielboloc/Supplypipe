@@ -108,7 +108,7 @@ You can specify the `--start` and `--end` which will limit the days to download 
 
 There is a `SECTORS` section in `config/default.conf` which displays all sectors and has one stock/ETF as defalut. New sectors and known stocks separated by comma in their respective sector.
 
-# Run tests
+## Run tests
 
 ```bash
 cd Supplypipe
@@ -122,12 +122,30 @@ docker run \
     -c "python -m unittest discover"
 ```
 
-# Run using Docker image
+## Run using Docker image
+
+Use `AAPL` on demand:
 
 ```bash
 docker run \
     --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
     dboloc/supplypipe:v1.0.0 --on-demand AAPL
+```
+
+Run in for all securities in the `[SECTORS][stocks]` config:
+
+```bash
+docker run \
+    --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
+    dboloc/supplypipe:v1.0.0 --only-stock
+```
+
+Run in for all sectors in `[SECTORS]` config:
+
+```bash
+docker run \
+    --mount "type=bind,source=$(pwd)/analysis,destination=/supplypipe/analysis"\
+    dboloc/supplypipe:v1.0.0
 ```
 
 # Results
