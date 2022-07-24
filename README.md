@@ -189,6 +189,3 @@ The information contained herein is not intended to be a source of advice or inv
 [candle]: https://www.investopedia.com/terms/c/candlestick.asp
 [cross]: https://www.investopedia.com/articles/active-trading/052014/how-use-moving-average-buy-stocks.asp
 [volume]: https://www.investopedia.com/terms/v/volume.asp
-
-
-
